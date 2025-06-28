@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Safe Chain - Therapist Login</title>
+    <title>Safe Chain - Therapist Wallet Login</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Google Fonts -->
@@ -12,6 +12,9 @@
     <!-- Bootstrap & Font Awesome -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+    <!-- Lucid for Cardano -->
+    <script src="https://unpkg.com/@lucid-cardano/lucid"></script>
 
     <style>
         body {
@@ -48,7 +51,7 @@
 
 <body>
 
-    <!-- Therapist Login Section -->
+    <!-- Therapist Wallet Login Section -->
     <div class="container login-container">
         <div class="row align-items-center justify-content-center">
             <div class="col-lg-6 mb-4 mb-lg-0">
@@ -56,55 +59,62 @@
             </div>
             <div class="col-lg-5">
                 <div class="login-card">
-                    <h3 class="text-center text-primary mb-4">Therapist Login</h3>
-                    <form id="loginForm">
-                        <div class="form-group">
-                            <label for="therapistId">Therapist ID</label>
-                            <input type="text" class="form-control" id="therapistId" placeholder="Enter your ID" required>
-                        </div>
-                        <div class="form-group mt-3">
-                            <label for="therapistPassword">Password</label>
-                            <input type="password" class="form-control" id="therapistPassword" placeholder="Enter password" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-block py-2 mt-4">Login</button>
-                        <div class="text-center mt-3">
-                            Not registered? <a href="therapist_signup.html">Sign Up</a>
-                        </div>
-                    </form>
+                    <h3 class="text-center text-primary mb-4">Therapist Wallet Login</h3>
+                    <p class="text-center mb-4">Connect your Cardano wallet to access your dashboard.</p>
+                    <div class="d-grid">
+                        <button id="connectWallet" class="btn btn-primary btn-block py-2">
+                            <i class="fas fa-wallet"></i> Connect Wallet
+                        </button>
+                    </div>
+                    <div class="text-center mt-3">
+                        Not registered? <a href="therapist_signup.html">Sign Up</a>
+                    </div>
+                    <div class="mt-4 text-center">
+                        <span id="walletAddress" class="badge bg-secondary">Wallet: Not Connected</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- CryptoJS for hashing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <!-- JS -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <!-- Bootstrap JS -->
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', function (e) {
-            e.preventDefault();
+        let lucid;
+        let walletAddress = '';
 
-            const id = document.getElementById('therapistId').value.trim();
-            const pwd = document.getElementById('therapistPassword').value;
+        document.getElementById('connectWallet').addEventListener('click', async () => {
+            try {
+                // Initialize Lucid
+                lucid = await Lucid.new(
+                    new Lucid.Blockfrost(
+                        "https://cardano-mainnet.blockfrost.io/api/v0",
+                        "mainnetuIz49e1AovCj5yshhFkLRE41UD6zVYFG" // Replace with your key
+                    ),
+                    "Mainnet"
+                );
 
-            const therapists = JSON.parse(localStorage.getItem('therapists') || '{}');
+                await lucid.selectWalletFromExtension();
+                walletAddress = await lucid.wallet.address();
 
-            if (!therapists[id]) {
-                alert('⚠️ Therapist ID not found. Please register first.');
-                return;
-            }
+                document.getElementById('walletAddress').innerText =
+                    "Wallet: " + walletAddress.slice(0, 6) + "..." + walletAddress.slice(-6);
 
-            const enteredHash = CryptoJS.SHA256(pwd).toString();
-            const storedHash = therapists[id].passwordHash;
+                // Fetch registered therapists from local storage
+                const therapists = JSON.parse(localStorage.getItem('therapists') || '{}');
 
-            if (enteredHash === storedHash) {
-                alert('✅ Login successful!');
-                sessionStorage.setItem('therapistLoggedIn', id);
-                window.location.href = 'therapist_dashboard.html'; // Change to your dashboard file
-            } else {
-                alert('❌ Incorrect password. Please try again.');
+                if (therapists[walletAddress]) {
+                    alert('✅ Wallet verified. Login successful!');
+                    sessionStorage.setItem('therapistLoggedIn', walletAddress);
+                    window.location.href = 'therapist_dashboard.html'; // Change to your dashboard file
+                } else {
+                    alert('⛔ Wallet not registered. Please sign up first.');
+                    window.location.href = 'therapist_signup.html';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('⚠️ Wallet connection failed. Please ensure your wallet is connected.');
             }
         });
     </script>

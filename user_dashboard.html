@@ -8,6 +8,9 @@
   <!-- Bootstrap CSS -->
   <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"/>
 
+  <!-- Lucid for Cardano -->
+  <script src="https://unpkg.com/@lucid-cardano/lucid"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -49,6 +52,17 @@
       padding: 0.5rem;
       border-radius: 5px;
       border: none;
+    }
+    .wallet-btn {
+      background: #32cd32;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .wallet-btn:hover {
+      background: #28a428;
     }
     .card {
       background: white;
@@ -118,6 +132,7 @@
       <h2 id="title">Welcome to Your Safe Chat Space</h2>
       <p id="chatIDText">Your Chat ID: <strong id="chatID"></strong></p>
       <div class="header-controls">
+        <button class="wallet-btn" onclick="connectWallet()">🔗 Connect Wallet</button>
         <select class="lang-select" onchange="changeLanguage(this.value)">
           <option value="en">🌐 English</option>
           <optgroup label="Nigeria">
@@ -132,7 +147,6 @@
             <option value="nu">Nupe</option>
             <option value="ed">Edo</option>
           </optgroup>
-          <!-- add other groups as needed -->
         </select>
         <button class="logout-btn" onclick="logout()">Logout</button>
       </div>
@@ -155,15 +169,50 @@
     </div>
   </div>
 
+  <!-- Bootstrap JS -->
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+
   <script>
-    // Ensure user is logged in
-    const loggedInUser = localStorage.getItem('loggedInUser');
-    if (!loggedInUser) {
-      alert('You are not logged in. Redirecting to login page.');
+    let lucid;
+    let walletAddress = '';
+
+    // Connect Wallet
+    async function connectWallet() {
+      try {
+        lucid = await Lucid.new(
+          new Lucid.Blockfrost(
+            "https://cardano-mainnet.blockfrost.io/api/v0",
+            "mainnetuIz49e1AovCj5yshhFkLRE41UD6zVYFG"
+          ),
+          "Mainnet"
+        );
+
+        await lucid.selectWalletFromExtension();
+        walletAddress = await lucid.wallet.address();
+
+        document.getElementById('chatID').innerText = walletAddress.slice(0, 6) + "..." + walletAddress.slice(-6);
+        localStorage.setItem('loggedInWallet', walletAddress);
+      } catch (err) {
+        alert('Failed to connect wallet.');
+      }
+    }
+
+    // Check login
+    window.onload = () => {
+      const savedWallet = localStorage.getItem('loggedInWallet');
+      if (!savedWallet) {
+        alert('Wallet not connected. Please connect your wallet.');
+      } else {
+        walletAddress = savedWallet;
+        document.getElementById('chatID').innerText = walletAddress.slice(0, 6) + "..." + walletAddress.slice(-6);
+      }
+    };
+
+    // Logout
+    function logout() {
+      localStorage.removeItem('loggedInWallet');
       window.location.href = 'login.html';
     }
-    // Show chat ID
-    document.getElementById('chatID').innerText = loggedInUser;
 
     // Chat form
     const form = document.getElementById("messageForm");
@@ -179,12 +228,6 @@
       document.getElementById("message").value = "";
       chatLog.scrollTop = chatLog.scrollHeight;
     });
-
-    // Logout
-    function logout() {
-      localStorage.removeItem('loggedInUser');
-      window.location.href = 'login.html';
-    }
 
     // Voice recording
     const recordBtn = document.getElementById("recordBtn");
@@ -221,7 +264,6 @@
       yo: { title: "Kaabo si Aaye Ifọrọwanilẹnuwo Ailewu Rẹ", conversationLabel: "Ifọrọwanilẹnuwo", sendLabel: "Firanṣẹ ifiranṣẹ:", sendBtn: "Firanṣẹ" },
       ha: { title: "Barka da zuwa Tattaunawa Lafiya", conversationLabel: "Tattaunawa", sendLabel: "Aika saƙo:", sendBtn: "Aika" },
       ig: { title: "Nnọọ na Mkparịta ụka Nchekwa Gị", conversationLabel: "Mkparịta ụka", sendLabel: "Zipu ozi:", sendBtn: "Zipu" },
-      // ...add more as needed
     };
 
     function changeLanguage(lang) {
